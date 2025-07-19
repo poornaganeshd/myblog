@@ -6,11 +6,11 @@ import os
 import logging
 from pathlib import Path
 from pydantic import BaseModel, Field
-from typing import List, Optional, Dict, Any
+from typing import List, Optional
 import uuid
 from datetime import datetime
 
-
+# Load environment variables
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
@@ -19,14 +19,13 @@ mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 
-# Create the main app without a prefix
+# FastAPI App
 app = FastAPI()
 
-# Create a router with the /api prefix
+# Router with prefix
 api_router = APIRouter(prefix="/api")
 
-
-# Resume Content Models
+# Models
 class PersonalInfo(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     name: str
@@ -45,8 +44,8 @@ class AboutMe(BaseModel):
 
 class Skill(BaseModel):
     name: str
-    category: str  # "programming", "tools", "research"
-    proficiency: int  # 1-100
+    category: str
+    proficiency: int
 
 class Skills(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -82,7 +81,7 @@ class ContactMessage(BaseModel):
     message: str
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
-# Create/Update Models
+# Update/Create Models
 class PersonalInfoUpdate(BaseModel):
     name: str
     title: str
@@ -121,13 +120,11 @@ class ContactMessageCreate(BaseModel):
     subject: str
     message: str
 
-
-# Personal Info Endpoints
+# Personal Info
 @api_router.get("/personal-info", response_model=PersonalInfo)
 async def get_personal_info():
     info = await db.personal_info.find_one()
     if not info:
-        # Return default info if none exists
         default_info = PersonalInfo(
             name="Dasariraju Poorna Ganesh",
             title="Computer Science Student & AI Enthusiast",
@@ -143,26 +140,21 @@ async def update_personal_info(info: PersonalInfoUpdate):
     existing = await db.personal_info.find_one()
     if existing:
         await db.personal_info.delete_one({"_id": existing["_id"]})
-    
     new_info = PersonalInfo(**info.dict())
     await db.personal_info.insert_one(new_info.dict())
     return new_info
 
-# About Me Endpoints
+# About Me
 @api_router.get("/about-me", response_model=AboutMe)
 async def get_about_me():
     about = await db.about_me.find_one()
     if not about:
         default_about = AboutMe(
-            content="I am a passionate Computer Science student with a deep interest in artificial intelligence and its applications in healthcare. My research focuses on anomaly detection, resource optimization, and IoMT (Internet of Medical Things) systems. I believe in leveraging technology to create meaningful solutions that improve human lives while maintaining empathy and ethical considerations.",
+            content="I am a passionate Computer Science student...",
             interests=[
                 "Anomaly Detection in Healthcare Systems",
                 "AI-powered Resource Management",
-                "Internet of Medical Things (IoMT)",
-                "Variational Autoencoders (VAE)",
-                "Graph Neural Networks (GNN)",
-                "Machine Learning Research",
-                "Healthcare Technology Innovation"
+                "Internet of Medical Things (IoMT)"
             ]
         )
         await db.about_me.insert_one(default_about.dict())
@@ -174,39 +166,19 @@ async def update_about_me(about: AboutMeUpdate):
     existing = await db.about_me.find_one()
     if existing:
         await db.about_me.delete_one({"_id": existing["_id"]})
-    
     new_about = AboutMe(**about.dict())
     await db.about_me.insert_one(new_about.dict())
     return new_about
 
-# Skills Endpoints
+# Skills
 @api_router.get("/skills", response_model=Skills)
 async def get_skills():
     skills = await db.skills.find_one()
     if not skills:
         default_skills = Skills(
-            programming_languages=[
-                Skill(name="Python", category="programming", proficiency=90),
-                Skill(name="Java", category="programming", proficiency=80),
-                Skill(name="C", category="programming", proficiency=75),
-                Skill(name="JavaScript", category="programming", proficiency=70),
-                Skill(name="SQL", category="programming", proficiency=80)
-            ],
-            tools=[
-                Skill(name="Google Colab", category="tools", proficiency=95),
-                Skill(name="Streamlit", category="tools", proficiency=85),
-                Skill(name="Android Studio", category="tools", proficiency=75),
-                Skill(name="TensorFlow", category="tools", proficiency=80),
-                Skill(name="PyTorch", category="tools", proficiency=75),
-                Skill(name="Git", category="tools", proficiency=85)
-            ],
-            research_domains=[
-                Skill(name="Anomaly Detection", category="research", proficiency=85),
-                Skill(name="Resource Optimization", category="research", proficiency=80),
-                Skill(name="VAE-GNN", category="research", proficiency=75),
-                Skill(name="IoMT Systems", category="research", proficiency=80),
-                Skill(name="Machine Learning", category="research", proficiency=85)
-            ]
+            programming_languages=[Skill(name="Python", category="programming", proficiency=90)],
+            tools=[Skill(name="Git", category="tools", proficiency=85)],
+            research_domains=[Skill(name="AI", category="research", proficiency=90)]
         )
         await db.skills.insert_one(default_skills.dict())
         return default_skills
@@ -217,33 +189,15 @@ async def update_skills(skills: SkillsUpdate):
     existing = await db.skills.find_one()
     if existing:
         await db.skills.delete_one({"_id": existing["_id"]})
-    
     new_skills = Skills(**skills.dict())
     await db.skills.insert_one(new_skills.dict())
     return new_skills
 
-# Projects Endpoints
+# Projects
 @api_router.get("/projects", response_model=List[Project])
 async def get_projects():
     projects = await db.projects.find().sort("created_at", -1).to_list(100)
-    if not projects:
-        # Create default projects
-        default_projects = [
-            Project(
-                title="AI-Powered Resource Management in IoMT",
-                description="Developed an intelligent resource management system for Internet of Medical Things (IoMT) networks using machine learning algorithms. The system optimizes resource allocation, predicts maintenance needs, and ensures efficient operation of medical devices in healthcare environments.",
-                technologies=["Python", "TensorFlow", "IoT", "Machine Learning", "Healthcare APIs"]
-            ),
-            Project(
-                title="Waste Classification Using Image Processing",
-                description="Created an advanced image classification system that automatically categorizes different types of waste materials. Implemented using computer vision techniques and deep learning models to promote environmental sustainability and efficient waste management.",
-                technologies=["Python", "OpenCV", "CNN", "Image Processing", "Environmental AI"]
-            )
-        ]
-        for project in default_projects:
-            await db.projects.insert_one(project.dict())
-        return default_projects
-    return [Project(**project) for project in projects]
+    return [Project(**proj) for proj in projects]
 
 @api_router.post("/projects", response_model=Project)
 async def create_project(project: ProjectCreate):
@@ -258,7 +212,7 @@ async def delete_project(project_id: str):
         raise HTTPException(status_code=404, detail="Project not found")
     return {"message": "Project deleted successfully"}
 
-# Experience Endpoints
+# Experience
 @api_router.get("/experience", response_model=List[Experience])
 async def get_experience():
     experience = await db.experience.find().sort("created_at", -1).to_list(100)
@@ -277,7 +231,7 @@ async def delete_experience(experience_id: str):
         raise HTTPException(status_code=404, detail="Experience not found")
     return {"message": "Experience deleted successfully"}
 
-# Contact Endpoints
+# Contact
 @api_router.post("/contact", response_model=ContactMessage)
 async def submit_contact_message(message: ContactMessageCreate):
     new_message = ContactMessage(**message.dict())
@@ -289,14 +243,18 @@ async def get_contact_messages():
     messages = await db.contact_messages.find().sort("created_at", -1).to_list(100)
     return [ContactMessage(**msg) for msg in messages]
 
-# Root endpoint
-@api_router.get("/")
+# Root endpoint (not inside /api)
+@app.get("/")
 async def root():
-    return {"message": "Futuristic Resume API is running!", "version": "1.0.0"}
+    return {
+        "message": "Futuristic Resume API is running!",
+        "version": "1.0.0"
+    }
 
-# Include the router in the main app
+# Attach API router
 app.include_router(api_router)
 
+# CORS Middleware
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
@@ -305,13 +263,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Configure logging
+# Logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
 
+# Shutdown event
 @app.on_event("shutdown")
 async def shutdown_db_client():
     client.close()
