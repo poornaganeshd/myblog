@@ -10,12 +10,13 @@
     "react-dom": "^19.0.0",
     "react-router-dom": "^7.5.1",
     "react-scripts": "5.0.1",
-    "serve": "^14.2.0"
+    "serve": "^14.2.0",
+    "@craco/craco": "^7.1.0"
   },
   "scripts": {
     "start": "serve -s build",
-    "build": "node_modules/.bin/craco build",
-    "test": "node_modules/.bin/craco test",
+    "build": "craco build",
+    "test": "craco test",
     "eject": "react-scripts eject"
   },
   "browserslist": {
@@ -31,7 +32,6 @@
     ]
   },
   "devDependencies": {
-    "@craco/craco": "^7.1.0",
     "@eslint/js": "9.23.0",
     "autoprefixer": "^10.4.20",
     "eslint": "9.23.0",
